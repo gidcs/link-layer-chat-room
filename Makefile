@@ -15,4 +15,4 @@ $(PROGS): main.o
 	$(CXX) -o $@ $(CFLAGS) $< 
 
 clean:
-	rm -rf *.o $(all)
+	rm -rf *.o $(PROGS)
