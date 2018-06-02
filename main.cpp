@@ -105,6 +105,7 @@ void recv_packet(int sockfd){
       printf("ether_type: %04x\n", ntohs(eh->ether_type));
       continue;
     }
+    cout << endl;
     cout << "[RECV] " << mh->username << ": ";
     output = "";
     for(int i=0; i<mh->payload_len; i++){
@@ -158,9 +159,6 @@ void recv_input(int sockfd, string username, string interface, uint8_t *src_mac)
         (struct sockaddr*)&device, sizeof(struct sockaddr_ll));
     if(ret < 0){
       perror("sendto");
-    }
-    else{
-      cout << "sendto: " << ret << "/" << buflen << endl;
     }
     free(buf);
     buf = NULL;
