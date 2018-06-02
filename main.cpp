@@ -29,6 +29,10 @@ void help(){
   cout << " main -i <interface> [-h] [-u <username>]" << endl;
 }
 
+static void sigusr(int s){
+  pthread_exit(NULL);
+}
+
 static void sigint(int s) {
   cout << endl;
   cout << "> " << flush;
@@ -88,6 +92,8 @@ void recv_packet(int sockfd){
   int ret;
   string output;
 
+  signal(SIGUSR1, sigusr);
+
   while(1){
     bzero(buf, BUF_SIZ);
     ret = recvfrom(sockfd, buf, BUF_SIZ, 0, NULL, NULL);
@@ -142,9 +148,9 @@ void recv_input(int sockfd, string username, string interface, uint8_t *src_mac)
     snprintf(mh->username, USERNAME_SIZ + 1, "%s", username.c_str());
     mh->payload_len = cmd.size();
     memcpy(payload, cmd.c_str(), cmd.size());
-    cout << " username   : " << mh->username << endl;
-    cout << " payload_len: " << mh->payload_len << endl;
-    cout << " payload    : " << payload << endl;
+    //cout << " username   : " << mh->username << endl;
+    //cout << " payload_len: " << mh->payload_len << endl;
+    //cout << " payload    : " << payload << endl;
     device.sll_family = AF_PACKET;
     device.sll_halen = ETH_ALEN;
     memset(device.sll_addr, 0xff, 6*sizeof(uint8_t));
@@ -160,7 +166,11 @@ void recv_input(int sockfd, string username, string interface, uint8_t *src_mac)
     buf = NULL;
     cout << "[SEND] " << cmd << endl;
   }
-  close(sockfd);
+}
+
+void *tfn(void *arg){
+  int *sockfd = (int *)arg;
+  recv_packet(*sockfd);
 }
 
 int main(int argc, char *argv []){
@@ -169,7 +179,8 @@ int main(int argc, char *argv []){
   string interface = "";
   int sockfd;
   uint8_t src_mac[HWADDR_LEN];
-  pid_t pid;
+  pthread_t tid;
+  int ret;
 
   while((opt = getopt(argc, argv, "i:u:h")) != -1){
     switch(opt){
@@ -201,8 +212,6 @@ int main(int argc, char *argv []){
 
   cout << "username : " << username << endl;
   cout << "interface: " << interface << endl;
-	
-  signal(SIGINT, sigint);
 
   if((sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETHERTYPE_CHAT))) < 0){
     perror("socket");
@@ -223,15 +232,31 @@ int main(int argc, char *argv []){
 
   bind_interface(sockfd, interface);
   //set_promiscuous(sockfd, interface);
-  if((pid = fork()) < 0) {
-    perror("fork");
-  }
-  else if(pid == 0){
-    recv_packet(sockfd);
-  }
-  else{
-    recv_input(sockfd, username, interface, src_mac);
+
+  ret = pthread_create(&tid, NULL, tfn, &sockfd);
+  if(ret != 0){
+    close(sockfd);
+    perror("pthread_create");
+    exit(EXIT_FAILURE);
   }
 
+  signal(SIGINT, sigint);
+  recv_input(sockfd, username, interface, src_mac);
+
+  ret = pthread_kill(tid, SIGUSR1);
+  if(ret != 0){
+    close(sockfd);
+    perror("pthread_kill");
+    exit(EXIT_FAILURE);
+  }
+
+  ret = pthread_join(tid, NULL);
+  if(ret != 0){
+    close(sockfd);
+    perror("pthread_join");
+    exit(EXIT_FAILURE);
+  }
+
+  close(sockfd);
   return 0;
 }
