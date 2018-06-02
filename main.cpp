@@ -112,6 +112,7 @@ void recv_packet(int sockfd){
       output += payload[i];
     }
     cout << output << endl;
+    cout << "> " << flush;
   }
 }
 
