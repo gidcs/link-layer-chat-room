@@ -17,7 +17,7 @@
 #include <assert.h>       // assert
 
 #define HWADDR_LEN 6
-#define USERNAME_SIZ 10
+#define USERNAME_SIZ 12
 #define BUF_SIZ 2048
 #define ETHERTYPE_CHAT 0x0701
 #define BROADCAST_ADDR 0xffffffffffff
@@ -40,7 +40,7 @@ static void sigint(int s) {
 
 struct msg_header {
   int payload_len;                //4
-  char username[USERNAME_SIZ+1];  //11
+  char username[USERNAME_SIZ];    //12
 };
 
 #define ETHLEN sizeof(struct ether_header)
@@ -147,7 +147,7 @@ void recv_input(int sockfd, string username, string interface, uint8_t *src_mac)
     eh->ether_type = htons(ETHERTYPE_CHAT);
     memset(eh->ether_dhost, 0xff, 6*sizeof(uint8_t));
     memcpy(eh->ether_shost, src_mac, 6*sizeof(uint8_t));
-    snprintf(mh->username, USERNAME_SIZ + 1, "%s", username.c_str());
+    snprintf(mh->username, USERNAME_SIZ, "%s", username.c_str());
     mh->payload_len = cmd.size();
     memcpy(payload, cmd.c_str(), cmd.size());
     //cout << " username   : " << mh->username << endl;
@@ -205,8 +205,8 @@ int main(int argc, char *argv []){
     username = "u" + to_string(rand());
   }
 
-  if(username.size() > USERNAME_SIZ){
-    username.resize(USERNAME_SIZ);
+  if(username.size() >= USERNAME_SIZ){
+    username.resize(USERNAME_SIZ - 1);
   }
 
   cout << "username : " << username << endl;
