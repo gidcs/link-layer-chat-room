@@ -1,7 +1,7 @@
 CC 	= gcc
 CXX = g++ -std=c++11
 PROGS = main
-CFLAGS = -Wall -g -lpthread
+CFLAGS = -Wall -g -pthread
 
 all: $(PROGS)
 
